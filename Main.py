@@ -25,14 +25,18 @@ def GroundMovement():
 
     Mesh = DefineMesh(i)
 
-    # Initialize output variables. u is x, v is y, w is z displacement
-    u = np.array(len(Mesh))
-    v = np.array(len(Mesh))
-    w = np.array(len(Mesh))
-
     # Extract x and y columns
     x = Mesh[:, 0]  
     y = Mesh[:, 1]  
+
+    '''
+    w_temp = (Vs / np.sqrt(2 * np.pi * i)) * np.exp(-np.power(1.5, 2) / (2 * i * i)) * (1 - norm.cdf(4 / i))
+    v_temp = -n / z0 * 1.5 * w_temp
+    u_temp = (n * Vs / (2 * np.pi * z0)) * np.exp(-np.power(1.5, 2) / (2 * i * i)) * (-np.exp(-np.power(4, 2) / (2 * i * i)))
+    print(w_temp)
+    print(v_temp)
+    print(u_temp)
+    '''
 
     # Compute w, v, u
     w = (Vs / np.sqrt(2 * np.pi * i)) * np.exp(-np.power(y, 2) / (2 * i * i)) * (1 - norm.cdf(x / i))
@@ -40,6 +44,7 @@ def GroundMovement():
     u = (n * Vs / (2 * np.pi * z0)) * np.exp(-np.power(y, 2) / (2 * i * i)) * (-np.exp(-np.power(x, 2) / (2 * i * i)))
 
     PlotContour(x, y, w, u, v)
+    # PlotSurfaceSettlement(x,y,w)
 
 # Take the i parameter as input and discretize a rectangular mesh around the origin
 def DefineMesh(i):
@@ -101,6 +106,35 @@ def PlotContour(x, y, w, u, v):
     ax[2].invert_yaxis()
 
     plt.tight_layout()  
+    plt.show()
+
+def PlotSurfaceSettlement(x, y, w):
+  # Create a grid for contouring
+    xi = np.linspace(min(x), max(x), 100)
+    yi = np.linspace(min(y), max(y), 100)
+    X, Y = np.meshgrid(xi, yi)
+
+    # Interpolate the data to fit the grid using cubic interpolation
+    Z = griddata((x, y), w, (X, Y), method='cubic')
+
+    # Create a figure and axis for 3D plotting
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the surface
+    surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
+
+    # Add color bar
+    fig.colorbar(surf, ax=ax, label="Settlement (w)")
+
+    # Labels and title
+    ax.set_xlabel("X Coordinate")
+    ax.set_ylabel("Y Coordinate")
+    ax.set_zlabel("Settlement (w)")
+    ax.set_title("3D Contour Plot of Settlement")
+    ax.invert_zaxis()
+
+    # Show the plot
     plt.show()
 
 GroundMovement()
