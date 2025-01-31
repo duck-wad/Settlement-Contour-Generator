@@ -14,9 +14,10 @@ z0 = 7.5                # Tunnel axis depth (m)
 # For now, i is a hardcoded term but it can be calculated based on the tunnel depth
 i = 3.9                 # Settlement trough width parameter (m)
 wmax = 0.00786          # Maximum vertical settlement (m) 
-Vs = 0.0124*math.pi*R*R
+# Vs = 0.0124*math.pi*R*R
+Vs = 0.0391113074
 # What is n?
-n = 9.8
+n = 9.867
 
 # Function to compute the x,y,z ground movements due to tunnel excavation
 # Assumption that the tunnel face has advanced significantly far from the start of the tunnel (xf > 3z0) so the transverse profile behind the face develops fully
@@ -29,20 +30,22 @@ def GroundMovement():
     x = Mesh[:, 0]  
     y = Mesh[:, 1]  
 
-    '''
-    w_temp = (Vs / np.sqrt(2 * np.pi * i)) * np.exp(-np.power(1.5, 2) / (2 * i * i)) * (1 - norm.cdf(4 / i))
+    # Validation using x=4, y=1.5. Expecting w=0.00113m, v=-0.00223m, u=-0.0009m
+    w_temp = (Vs / np.sqrt(2.0 * np.pi * i)) * np.exp(-(1.5**2) / (2.0 * i**2)) * (1 - 0.846)
     v_temp = -n / z0 * 1.5 * w_temp
-    u_temp = (n * Vs / (2 * np.pi * z0)) * np.exp(-np.power(1.5, 2) / (2 * i * i)) * (-np.exp(-np.power(4, 2) / (2 * i * i)))
+    u_temp = (n * Vs / (2.0 * np.pi * z0)) * np.exp(-(1.5**2) / (2.0 * i**2)) * (-np.exp(-(4**2) / (2.0 * i**2)))
     print(w_temp)
     print(v_temp)
     print(u_temp)
-    '''
-
+    
     # Compute w, v, u
-    w = (Vs / np.sqrt(2 * np.pi * i)) * np.exp(-np.power(y, 2) / (2 * i * i)) * (1 - norm.cdf(x / i))
+    w = (Vs / np.sqrt(2.0 * np.pi * i)) * np.exp(-(y**2) / (2.0 * i**2)) * (1.0 - norm.cdf(x / i))
     v = -n / z0 * y * w
-    u = (n * Vs / (2 * np.pi * z0)) * np.exp(-np.power(y, 2) / (2 * i * i)) * (-np.exp(-np.power(x, 2) / (2 * i * i)))
+    u = (n * Vs / (2.0 * np.pi * z0)) * np.exp(-(y**2) / (2.0 * i**2)) * (-np.exp(-(x**2) / (2.0 * i**2)))
 
+    x = x/i
+    y = y/i
+  
     PlotContour(x, y, w, u, v)
     # PlotSurfaceSettlement(x,y,w)
 
@@ -84,27 +87,28 @@ def PlotContour(x, y, w, u, v):
 
     fig, ax = plt.subplots(1, 3, figsize=(18, 6))
 
-    contour_w = ax[0].contourf(Y, X, Z_w, levels=20, cmap='viridis')
+    contour_w = ax[0].contour(Y, X, Z_w, levels=10, cmap='viridis')
     fig.colorbar(contour_w, ax=ax[0], label="Settlement (w)")
     ax[0].set_xlabel("Y Coordinate")
     ax[0].set_ylabel("X Coordinate")
     ax[0].set_title("Contour Plot of Surface Settlement")
     ax[0].invert_yaxis()
 
-    contour_u = ax[1].contourf(Y, X, Z_u, levels=20, cmap='viridis')
+    contour_u = ax[1].contour(Y, X, Z_u, levels=10, cmap='viridis')
     fig.colorbar(contour_u, ax=ax[1], label="Displacement (u)")
     ax[1].set_xlabel("Y Coordinate")
     ax[1].set_ylabel("X Coordinate")
     ax[1].set_title("Contour Plot of X-Displacement")
     ax[1].invert_yaxis()
 
-    contour_v = ax[2].contourf(Y, X, Z_v, levels=20, cmap='viridis')
+    contour_v = ax[2].contour(Y, X, Z_v, levels=10, cmap='viridis')
     fig.colorbar(contour_v, ax=ax[2], label="Displacement (v)")
     ax[2].set_xlabel("Y Coordinate")
     ax[2].set_ylabel("X Coordinate")
     ax[2].set_title("Contour Plot of Y-Displacement")
     ax[2].invert_yaxis()
 
+    plt.grid()
     plt.tight_layout()  
     plt.show()
 
