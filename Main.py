@@ -1,6 +1,7 @@
 import numpy as np 
 import math
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from scipy.stats import norm
 from scipy.interpolate import griddata
 
@@ -9,20 +10,23 @@ MeshLong = 0.5          # Mesh length along tunnel axis
 MeshTrans = 0.5         # Mesh length transverse to tunnel axis
 
 # Hard-coded variables
-R = 2.014/2             # Tunnel radius (m) 
-z0 = 7.5                # Tunnel axis depth (m)
-z = 0                   # Sampling surface points
+R = 1.105           # Tunnel radius (m) 
+z0 = 10.5                # Tunnel axis depth (m)
+z = 0.5                   # Sampling point elevation (m)
 # For now, i is a hardcoded term but it can be calculated based on the tunnel depth
-i = 3.9                 # Settlement trough width parameter (m)
+i = 2.7                 # Settlement trough width parameter (m)
 n = 1
-Wmax = 0.00786          # Maximum vertical settlement (m) 
-Vs = Wmax * i * (2*np.pi)**0.5
+# Wmax = 0.00786          # Maximum vertical settlement (m) 
+# Vs = Wmax * i * (2*np.pi)**0.5
 # Alternatively calculate Vs as a fraction of tunnel face area
-# Vs = 0.025 * np.pi * R**2
+Vs = 0.05 * np.pi * R**2
 
 # Set position of tunnel start and face relative to coordinate system. Origin is at tunnel face
 xi = -10000
 xf = 0
+
+# Building foundation to be plotted on contour map
+foundation_corners = [[-0.5/i, -4.0/i], [-6.0/i, -9.6/i], [-9.5/i, -6.1/i], [-4.0/i, -0.5/i]]
 
 def ValidateEquations():
     ## Validation of equations
@@ -82,8 +86,7 @@ def GroundMovement():
     eps_y *= 10e6
     eps_x *= 10e6
   
-    # PlotDisplacements(x, y, w, u, v)
-    PlotStrains(x, y, eps_z, eps_x, eps_y)
+    PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y)
     # PlotSurfaceSettlement(x,y,w)
 
 # Take the i parameter as input and discretize a rectangular mesh around the origin
@@ -111,7 +114,7 @@ def DefineMesh(i):
 
     return Mesh 
 
-def PlotDisplacements(x, y, w, u, v):
+def PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y):
     # Create a grid for contouring
     xi = np.linspace(min(x), max(x), 100)
     yi = np.linspace(min(y), max(y), 100)
@@ -121,79 +124,75 @@ def PlotDisplacements(x, y, w, u, v):
     Z_w = griddata((x, y), w, (X, Y), method='cubic')
     Z_u = griddata((x, y), u, (X, Y), method='cubic')
     Z_v = griddata((x, y), v, (X, Y), method='cubic')
-
-    fig, ax = plt.subplots(1, 3, figsize=(18, 6))
-
-    contour_w = ax[0].contour(Y, X, Z_w, levels=10, cmap='viridis')
-    fig.colorbar(contour_w, ax=ax[0], label="Settlement (w)")
-    ax[0].set_xlabel("Y Coordinate")
-    ax[0].set_ylabel("X Coordinate")
-    ax[0].set_title("Contour Plot of Surface Settlement (W)")
-    ax[0].invert_yaxis()
-    ax[0].clabel(contour_w,fontsize=6,inline=1)
-    ax[0].clabel(contour_w,fontsize=6,inline=1)
-    ax[0].grid()
-    contour_u = ax[1].contour(Y, X, Z_u, levels=10, cmap='viridis')
-    fig.colorbar(contour_u, ax=ax[1], label="Displacement (u)")
-    ax[1].set_xlabel("Y Coordinate")
-    ax[1].set_ylabel("X Coordinate")
-    ax[1].set_title("Contour Plot of X-Displacement (U)")
-    ax[1].invert_yaxis()
-    ax[1].clabel(contour_u,fontsize=6,inline=1)
-    ax[1].clabel(contour_u,fontsize=6,inline=1)
-    ax[1].grid()
-    contour_v = ax[2].contour(Y, X, Z_v, levels=10, cmap='viridis')
-    fig.colorbar(contour_v, ax=ax[2], label="Displacement (V)")
-    ax[2].set_xlabel("Y Coordinate")
-    ax[2].set_ylabel("X Coordinate")
-    ax[2].set_title("Contour Plot of Y-Displacement (V)")
-    ax[2].invert_yaxis()
-    ax[2].clabel(contour_v,fontsize=6,inline=1)
-    ax[2].clabel(contour_v,fontsize=6,inline=1)
-    ax[2].grid()
-    plt.tight_layout()  
-    plt.show()
-
-def PlotStrains(x, y, eps_z, eps_x, eps_y):
-    # Create a grid for contouring
-    xi = np.linspace(min(x), max(x), 100)
-    yi = np.linspace(min(y), max(y), 100)
-    X, Y = np.meshgrid(xi, yi)
-
-    # Interpolate data to fit grid for eps_z, eps_x, and eps_y
     Z_eps_z = griddata((x, y), eps_z, (X, Y), method='cubic')
     Z_eps_x = griddata((x, y), eps_x, (X, Y), method='cubic')
     Z_eps_y = griddata((x, y), eps_y, (X, Y), method='cubic')
 
-    fig, ax = plt.subplots(1, 3, figsize=(18, 6))
+    fig, ax = plt.subplots(2, 3, figsize=(14, 9))
 
-    contour_eps_z = ax[0].contour(Y, X, Z_eps_z, levels=10, cmap='viridis')
-    fig.colorbar(contour_eps_z, ax=ax[0], label="Vertical Strain (eps_z)")
-    ax[0].set_xlabel("Y Coordinate")
-    ax[0].set_ylabel("X Coordinate")
-    ax[0].set_title("Contour Plot of Vertical Strain (eps_z)")
-    ax[0].invert_yaxis()
-    ax[0].clabel(contour_eps_z,fontsize=6,inline=1)
-    ax[0].clabel(contour_eps_z,fontsize=6,inline=1)
-    ax[0].grid()
-    contour_eps_x = ax[1].contour(Y, X, Z_eps_x, levels=10, cmap='viridis')
-    fig.colorbar(contour_eps_x, ax=ax[1], label="X-Horizontal Strain (eps_x)")
-    ax[1].set_xlabel("Y Coordinate")
-    ax[1].set_ylabel("X Coordinate")
-    ax[1].set_title("Contour Plot of X-Horizontal Strain (eps_x)")
-    ax[1].invert_yaxis()
-    ax[1].clabel(contour_eps_x,fontsize=6,inline=1)
-    ax[1].clabel(contour_eps_x,fontsize=6,inline=1)
-    ax[1].grid()
-    contour_eps_y = ax[2].contour(Y, X, Z_eps_y, levels=10, cmap='viridis')
-    fig.colorbar(contour_eps_y, ax=ax[2], label="Y-Horizontal Strain (eps_y)")
-    ax[2].set_xlabel("Y Coordinate")
-    ax[2].set_ylabel("X Coordinate")
-    ax[2].set_title("Contour Plot of Y-Horizontal Strain (eps_y)")
-    ax[2].invert_yaxis()
-    ax[2].clabel(contour_eps_y,fontsize=6,inline=1)
-    ax[2].clabel(contour_eps_y,fontsize=6,inline=1)
-    ax[2].grid()
+    contour_w = ax[0, 0].contour(Y, X, Z_w, levels=10, cmap='viridis')
+    fig.colorbar(contour_w, ax=ax[0, 0], label="Settlement (mm)")
+    ax[0, 0].set_xlabel("Y Coordinate")
+    ax[0, 0].set_ylabel("X Coordinate")
+    ax[0, 0].set_title("Contour Plot of Surface Settlement (W)")
+    ax[0, 0].invert_yaxis()
+    ax[0, 0].clabel(contour_w,fontsize=6,inline=1)
+    ax[0, 0].clabel(contour_w,fontsize=6,inline=1)
+    ax[0, 0].grid()
+
+    contour_u = ax[0, 1].contour(Y, X, Z_u, levels=10, cmap='viridis')
+    fig.colorbar(contour_u, ax=ax[0, 1], label="Displacement (mm)")
+    ax[0, 1].set_xlabel("Y Coordinate")
+    ax[0, 1].set_ylabel("X Coordinate")
+    ax[0, 1].set_title("Contour Plot of X-Displacement (U)")
+    ax[0, 1].invert_yaxis()
+    ax[0, 1].clabel(contour_u,fontsize=6,inline=1)
+    ax[0, 1].clabel(contour_u,fontsize=6,inline=1)
+    ax[0, 1].grid()
+
+    contour_v = ax[0, 2].contour(Y, X, Z_v, levels=10, cmap='viridis')
+    fig.colorbar(contour_v, ax=ax[0, 2], label="Displacement (mm)")
+    ax[0, 2].set_xlabel("Y Coordinate")
+    ax[0, 2].set_ylabel("X Coordinate")
+    ax[0, 2].set_title("Contour Plot of Y-Displacement (V)")
+    ax[0, 2].invert_yaxis()
+    ax[0, 2].clabel(contour_v,fontsize=6,inline=1)
+    ax[0, 2].clabel(contour_v,fontsize=6,inline=1)
+    ax[0, 2].grid()
+
+    contour_eps_z = ax[1, 0].contour(Y, X, Z_eps_z, levels=10, cmap='viridis')
+    fig.colorbar(contour_eps_z, ax=ax[1, 0], label="Vertical Strain (μ)")
+    ax[1, 0].set_xlabel("Y Coordinate")
+    ax[1, 0].set_ylabel("X Coordinate")
+    ax[1, 0].set_title("Contour Plot of Vertical Strain (eps_z)")
+    ax[1, 0].invert_yaxis()
+    ax[1, 0].clabel(contour_eps_z,fontsize=6,inline=1)
+    ax[1, 0].clabel(contour_eps_z,fontsize=6,inline=1)
+    ax[1, 0].grid()
+
+    contour_eps_x = ax[1, 1].contour(Y, X, Z_eps_x, levels=10, cmap='viridis')
+    fig.colorbar(contour_eps_x, ax=ax[1, 1], label="X-Horizontal Strain (μ)")
+    ax[1, 1].set_xlabel("Y Coordinate")
+    ax[1, 1].set_ylabel("X Coordinate")
+    ax[1, 1].set_title("Contour Plot of X-Horizontal Strain (eps_x)")
+    ax[1, 1].invert_yaxis()
+    ax[1, 1].clabel(contour_eps_x,fontsize=6,inline=1)
+    ax[1, 1].clabel(contour_eps_x,fontsize=6,inline=1)
+    ax[1, 1].grid()
+
+    contour_eps_y = ax[1, 2].contour(Y, X, Z_eps_y, levels=10, cmap='viridis')
+    fig.colorbar(contour_eps_y, ax=ax[1, 2], label="Y-Horizontal Strain (μ)")
+    ax[1, 2].set_xlabel("Y Coordinate")
+    ax[1, 2].set_ylabel("X Coordinate")
+    ax[1, 2].set_title("Contour Plot of Y-Horizontal Strain (eps_y)")
+    ax[1, 2].invert_yaxis()
+    ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
+    ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
+    ax[1, 2].grid()
+
+    for row in ax:
+        for subplot in row:
+            subplot.add_patch(patches.Polygon(foundation_corners, closed=True, edgecolor='b', facecolor='none'))
     plt.tight_layout()  
     plt.show()
 
@@ -226,5 +225,5 @@ def PlotSurfaceSettlement(x, y, w):
     # Show the plot
     plt.show()
 
-ValidateEquations()
+# ValidateEquations()
 GroundMovement()
