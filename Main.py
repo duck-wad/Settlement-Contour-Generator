@@ -21,7 +21,7 @@ Vs = Wmax * i * (2*np.pi)**0.5
 # Vs = 0.025 * np.pi * R**2
 
 # Set position of tunnel start and face relative to coordinate system. Origin is at tunnel face
-xi = -1000
+xi = -10000
 xf = 0
 
 def ValidateEquations():
