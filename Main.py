@@ -79,9 +79,8 @@ def GroundMovement():
     y = y/i
 
     # Plot displacement contour in mm, strain in μ
-    PlotContours(x, y, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6)
-
-    #PlotSurfaceSettlement(x,y,w*10e3)
+    #PlotContours(x, y, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6)
+    PlotSurfaceSettlement(x,y,w*10e3, u*10e3, v*10e3)
 
 # Take the i parameter as input and discretize a rectangular mesh around the origin
 def DefineMesh(i):
@@ -183,40 +182,57 @@ def PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y):
     ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
     ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
     ax[1, 2].grid()
-
+    '''
     for row in ax:
         for subplot in row:
             subplot.add_patch(patches.Polygon(foundation_corners, closed=True, edgecolor='b', facecolor='none'))
+    '''
     plt.tight_layout()  
     plt.show()
 
-def PlotSurfaceSettlement(x, y, w):
-  # Create a grid for contouring
+def PlotSurfaceSettlement(x, y, w, u, v):
+    # Create a grid for contouring
     xi = np.linspace(min(x), max(x), 100)
     yi = np.linspace(min(y), max(y), 100)
     X, Y = np.meshgrid(xi, yi)
 
     # Interpolate the data to fit the grid using cubic interpolation
-    Z = griddata((x, y), w, (X, Y), method='cubic')
+    Zw = griddata((x, y), w, (X, Y), method='cubic')
+    Zu = griddata((x, y), u, (X, Y), method='cubic')
+    Zv = griddata((x, y), v, (X, Y), method='cubic')
 
-    # Create a figure and axis for 3D plotting
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(18, 6))
 
-    # Plot the surface
-    surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
+    # Plot for settlement
+    ax1 = fig.add_subplot(131, projection='3d')
+    surf1 = ax1.plot_surface(X, Y, Zw, cmap='viridis', edgecolor='none')
+    fig.colorbar(surf1, ax=ax1, label="Settlement (mm)")
+    ax1.set_xlabel("X Coordinate (x/i)")
+    ax1.set_ylabel("Y Coordinate (y/i)")
+    ax1.set_zlabel("Settlement (mm)")
+    ax1.set_title("3D Contour Plot of Settlement (W)")
+    ax1.invert_zaxis()
 
-    # Add color bar
-    fig.colorbar(surf, ax=ax, label="Settlement (mm)")
+    # Plot for U displacement
+    ax2 = fig.add_subplot(132, projection='3d')
+    surf2 = ax2.plot_surface(X, Y, Zu, cmap='viridis', edgecolor='none')
+    fig.colorbar(surf2, ax=ax2, label="Displacement (mm)")
+    ax2.set_xlabel("X Coordinate (x/i)")
+    ax2.set_ylabel("Y Coordinate (y/i)")
+    ax2.set_zlabel("Displacement (mm)")
+    ax2.set_title("3D Contour Plot of Displacement (U)")
+    ax2.invert_zaxis()
 
-    # Labels and title
-    ax.set_xlabel("X Coordinate (x/i)")
-    ax.set_ylabel("Y Coordinate (y/i)")
-    ax.set_zlabel("Settlement (mm)")
-    ax.set_title("3D Contour Plot of Settlement")
-    ax.invert_zaxis()
+    # Plot for V displacement
+    ax3 = fig.add_subplot(133, projection='3d')
+    surf3 = ax3.plot_surface(X, Y, Zv, cmap='viridis', edgecolor='none')
+    fig.colorbar(surf3, ax=ax3, label="Displacement (mm)")
+    ax3.set_xlabel("X Coordinate (x/i)")
+    ax3.set_ylabel("Y Coordinate (y/i)")
+    ax3.set_zlabel("Displacement (mm)")
+    ax3.set_title("3D Contour Plot of Displacement (V)")
+    ax3.invert_zaxis()
 
-    # Show the plot
     plt.tight_layout()
     plt.show()
 
