@@ -6,6 +6,7 @@ from scipy.interpolate import griddata
 import sympy as sp
 from sympy.stats import Normal, cdf
 from sympy import Symbol, diff, lambdify
+from matplotlib.backends.backend_pdf import PdfPages
 
 # Meshing Parameters
 MeshLong = 0.5          # Mesh length along tunnel axis
@@ -13,26 +14,19 @@ MeshTrans = 0.5         # Mesh length transverse to tunnel axis
 
 # Hard-coded variables
 R = 1.105           # Tunnel radius (m) 
-z0 = 10.5             # Tunnel axis depth (m)
-z = 0.5                 # Sampling point elevation (m)
+z0 = 7.5            # Tunnel axis depth (m)
+z = 0                 # Sampling point elevation (m)
 # For now, i is a hardcoded term but it can be calculated based on the tunnel depth
-i = 2.7               # Settlement trough width parameter (m)
+i = 3.9             # Settlement trough width parameter (m)
 n = 1
-#Wmax = 0.00786          # Maximum vertical settlement (m) 
-#Vs = Wmax * i * (2*np.pi)**0.5
+Wmax = 0.00786          # Maximum vertical settlement (m) 
+Vs = Wmax * i * (2*np.pi)**0.5
 # Alternatively calculate Vs as a fraction of tunnel face area
-Vs = 0.05 * np.pi * R**2
+#Vs = 0.05 * np.pi * R**2
 
 # Set position of tunnel start and face relative to coordinate system. Origin is at tunnel face
 xi = -1000
 xf = 0
-
-# Wall to be plotted on contour map (unscaled)
-wall_corners = np.array([[-0.5, -4.0], [-6.0, -9.6]])
-
-# Wall angle increments
-wall_angles = np.arange(0, 185, 5)
-print(wall_angles)
 
 def ValidateEquations():
     ## Validation of equations
@@ -71,18 +65,30 @@ def Main():
     # Extract x and y columns
     x = Mesh[:, 0]  
     y = Mesh[:, 1]  
+
+    x_sym = Symbol('x_sym')
+    y_sym = Symbol('y_sym')
     
-    w, v, u = ComputeDisplacements(x, y)
-    eps_z, eps_x, eps_y = ComputeStrains(x, y, w)
+    w_eq = np.vectorize(lambdify((x_sym, y_sym), DisplacementEquations(x_sym, y_sym)[0], "numpy"))
+    u_eq = np.vectorize(lambdify((x_sym, y_sym), DisplacementEquations(x_sym, y_sym)[1], "numpy"))
+    v_eq = np.vectorize(lambdify((x_sym, y_sym), DisplacementEquations(x_sym, y_sym)[2], "numpy"))
+    w = w_eq(x, y)
+    u = u_eq(x, y)
+    v = v_eq(x, y)
+
+    eps_z_eq = np.vectorize(lambdify((x_sym, y_sym), StrainEquations(x_sym, y_sym)[0], "numpy"))
+    eps_x_eq = np.vectorize(lambdify((x_sym, y_sym), StrainEquations(x_sym, y_sym)[1], "numpy"))
+    eps_y_eq = np.vectorize(lambdify((x_sym, y_sym), StrainEquations(x_sym, y_sym)[2], "numpy"))
+    eps_z = eps_z_eq(x, y)
+    eps_x = eps_x_eq(x, y)
+    eps_y = eps_y_eq(x, y)
    
     # Plot displacement contour in mm, strain in μ
     # x and y are scaled for graphing
     #Plot3D(x/i, y/i, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6, xi, xf)
-    PlotContours(x/i, y/i, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6)
+   # PlotContours(x/i, y/i, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6)
 
-    x_wall = wall_corners[:,0]
-    y_wall = wall_corners[:,1]
-    wall_length = np.sqrt((x_wall[0] - x_wall[1])**2 + (y_wall[0] - y_wall[1])**2)
+    StrainAlongTheta(x, y)
     
 # Take the i parameter as input and discretize a rectangular mesh around the origin
 def DefineMesh(i):
@@ -109,32 +115,87 @@ def DefineMesh(i):
 
     return Mesh 
 
-def ComputeDisplacements(x, y):
+# Return symbolic math equations for the w, v, u
+def DisplacementEquations(x, y):
 
-    x_xi = x - xi
-    x_xf = x - xf
+    # Mean of 0, std dev of 1
+    X = Normal('X', 0, 1)
 
     # Compute w, v, u in m
-    w = (Vs / np.sqrt(2*np.pi) / i) * np.exp(-y**2 / (2.0*i**2)) * (norm.cdf(x_xi / i) - norm.cdf(x_xf / i))
+    w = (Vs / sp.sqrt(2*sp.pi) / i) * sp.exp(-y**2 / (2.0*i**2)) * (cdf(X)((x-xi)/i) - cdf(X)((x-xf)/i))
+    u = (n * Vs / (2.0 * sp.pi * (z0 - z))) * sp.exp(-y**2 / (2*i**2)) * (sp.exp(-(x-xi)**2 / (2.0 * i **2)) - sp.exp(-(x-xf)**2 / (2.0 * i **2)))
     v = -y / (z0 - z) * w
-    u = (n * Vs / (2.0 * np.pi * (z0 - z))) * np.exp(-y**2 / (2*i**2)) * (np.exp(-x_xi**2 / (2.0 * i **2)) - np.exp(-x_xf**2 / (2.0 * i **2)))
 
-    return w, v, u
 
-def ComputeStrains(x, y, w):
+    return w, u, v
 
-    x_xi = x - xi
-    x_xf = x - xf
+# Return the symbolic math equations for the strains
+def StrainEquations(x, y):
+
+    w = DisplacementEquations(x, y)[0]
+    X = Normal('X', 0, 1)
 
     # Compute the strains in z, y, x
-    eps_z = -n * Vs / (np.sqrt(2.0*np.pi)*i*(z0-z)) * np.exp(-y**2 / (2.0*i**2)) * (-1.0/np.sqrt(2.0*np.pi) * ((x_xi / i) * np.exp(-x_xi**2 / (2.0*i**2)) - (x_xf / i)*np.exp(-x_xf**2/(2.0*i**2))) + (y**2 / i**2 - 1.0) * (norm.cdf(x_xi / i) - norm.cdf(x_xf / i))) 
-    eps_x = -n * Vs / (2.0*np.pi * i * (z0-z)) * np.exp(-y**2 / (2.0*i**2)) * ((x_xi / i) * np.exp(-x_xi**2 / (2.0*i**2)) - (x_xf / i) * np.exp(-x_xf**2 / (2.0*i**2)))
+    eps_z = -n * Vs / (sp.sqrt(2.0*sp.pi)*i*(z0-z)) * sp.exp(-y**2 / (2.0*i**2)) * (-1.0/sp.sqrt(2.0*sp.pi) * (((x-xi) / i) * sp.exp(-(x-xi)**2 / (2.0*i**2)) - ((x-xf) / i)*sp.exp(-(x-xf)**2/(2.0*i**2))) + (y**2 / i**2 - 1.0) * (cdf(X)((x-xi)/i) - cdf(X)((x-xf)/i))) 
+    eps_x = -n * Vs / (2.0*sp.pi * i * (z0-z)) * sp.exp(-y**2 / (2.0*i**2)) * ((x-xi / i) * sp.exp(-(x-xi)**2 / (2.0*i**2)) - ((x-xf) / i) * sp.exp(-(x-xf)**2 / (2.0*i**2)))
     eps_y = n / (z0-z) * w * (y**2 / i**2 - 1.0)
-
     return eps_z, eps_x, eps_y
 
-def StrainAlongTheta():
-    x = Symbol
+# Determine the strains along angle theta from x-axis at 5 degree increments
+# Compute the strain tensor by doing the partial derivatives of u and v wrt x and y
+# Then perform the strain transformation equations to get strain in the theta direction
+def StrainAlongTheta(x, y):
+
+    # Wall angle increments
+    wall_angle = np.arange(0, 185, 5)
+    wall_angle_rad = np.deg2rad(wall_angle)
+
+    x_sym = Symbol('x_sym')
+    y_sym = Symbol('y_sym')
+
+    u_sym = DisplacementEquations(x_sym, y_sym)[1]
+    v_sym = DisplacementEquations(x_sym, y_sym)[2]
+
+    eps_x_sym = StrainEquations(x_sym, y_sym)[1]
+    eps_y_sym = StrainEquations(x_sym, y_sym)[2]
+    eps_xy_sym = 0.5 * (diff(u_sym, y_sym) + diff(v_sym, x_sym))
+
+    # Strain transformation equation to direction angle theta from x-axis
+    theta_sym = Symbol('theta_sym')
+    eps_theta_sym = ((eps_x_sym + eps_y_sym) / 2.0) + ((eps_x_sym - eps_y_sym) / 2.0 * sp.cos(2.0 * theta_sym)) + (eps_xy_sym * sp.sin(2.0 * theta_sym))
+    eps_theta = lambdify((x_sym, y_sym, theta_sym), eps_theta_sym, "numpy")
+
+    # Loop over every angle, and calculate strain at each point in mesh
+    strain_results = np.zeros((len(x), len(wall_angle_rad)))
+    for it1 in range(len(x)):
+        for it2 in range(len(wall_angle_rad)):
+            strain_results[it1, it2] = eps_theta(x[it1], y[it1], wall_angle_rad[it2])
+            
+
+    xi = np.linspace(min(x/i), max(x/i), 100)
+    yi = np.linspace(min(y/i), max(y/i), 100)
+    X, Y = np.meshgrid(xi, yi)
+    Z_eps_x = griddata((x/i, y/i), (strain_results[:,0]*1e6), (X, Y), method='cubic')
+    Z_eps_y = griddata((x/i, y/i), (strain_results[:,1]*1e6), (X, Y), method='cubic')
+
+    
+    with PdfPages('Strain Plots.pdf') as pdf:
+        for it1 in range(len(wall_angle)):
+            Z_eps = griddata((x/i, y/i), (strain_results[:,it1]*1e6), (X, Y), method='cubic')
+            plt.figure()
+            contour = plt.contour(Y, X, Z_eps, levels=10, cmap='viridis')
+            plt.colorbar(contour, label="Horizontal Strain (με)", ax=plt.gca())
+            plt.xlabel("Y Coordinate (y/i)")
+            plt.ylabel("X Coordinate (x/i)")
+            plt.title("Contour Plot of Horizontal Strain: " + str(wall_angle[it1]) + " Degrees from Tunnel Axis")
+            plt.gca().invert_yaxis()
+            plt.clabel(contour,fontsize=6,inline=1)
+            plt.clabel(contour,fontsize=6,inline=1)
+            plt.grid()
+            pdf.savefig()
+            plt.close()
+            
+
 
 def PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y):
     # Create a grid for contouring
@@ -212,10 +273,6 @@ def PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y):
     ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
     ax[1, 2].clabel(contour_eps_y,fontsize=6,inline=1)
     ax[1, 2].grid()
-
-    for row in ax:
-        for subplot in row:
-            subplot.add_patch(patches.Polygon(wall_corners / i, closed=True, edgecolor='b', facecolor='none'))
 
     plt.tight_layout()  
 
@@ -304,4 +361,4 @@ def Plot3D(x, y, w, u, v, eps_z, eps_x, eps_y, xStart, xFinish):
     plt.tight_layout()
 
 Main()
-plt.show()
+#plt.show()
