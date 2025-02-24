@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from scipy.stats import norm
 from scipy.interpolate import griddata
+import sympy as sp
+from sympy.stats import Normal, cdf
+from sympy import Symbol, diff, lambdify
 
 # Meshing Parameters
 MeshLong = 0.5          # Mesh length along tunnel axis
@@ -26,6 +29,10 @@ xf = 0
 
 # Wall to be plotted on contour map (unscaled)
 wall_corners = np.array([[-0.5, -4.0], [-6.0, -9.6]])
+
+# Wall angle increments
+wall_angles = np.arange(0, 185, 5)
+print(wall_angles)
 
 def ValidateEquations():
     ## Validation of equations
@@ -125,6 +132,9 @@ def ComputeStrains(x, y, w):
     eps_y = n / (z0-z) * w * (y**2 / i**2 - 1.0)
 
     return eps_z, eps_x, eps_y
+
+def StrainAlongTheta():
+    x = Symbol
 
 def PlotContours(x, y, w, u, v, eps_z, eps_x, eps_y):
     # Create a grid for contouring
