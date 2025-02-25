@@ -97,7 +97,7 @@ def Main():
     PlotContours(x/i, y/i, w*1e3, u*1e3, v*1e3, eps_z*1e6, eps_x*1e6, eps_y*1e6)
 
     StrainAlongTheta(x, y)
-    #DisplacementAlongTheta(x, y, u, v)
+    DisplacementAlongTheta(x, y, u, v)
 
 # Take the i parameter as input and discretize a rectangular mesh around the origin
 def DefineMesh(i):
@@ -188,7 +188,7 @@ def StrainAlongTheta(x, y):
     with PdfPages('Strain Plots.pdf') as pdf:
         for it1 in range(len(wall_angle)):
             Z_eps = griddata((x/i, y/i), (strain_results[:,it1]*1e6), (X, Y), method='cubic')
-            plt.figure()
+            plt.figure(figsize = (10, 10))
             contour = plt.contour(Y, X, Z_eps, levels=10, cmap='viridis')
             plt.colorbar(contour, label="Horizontal Strain (με)", ax=plt.gca())
             plt.xlabel("Y Coordinate (y/i)")
@@ -257,7 +257,7 @@ def DisplacementAlongTheta(x, y, u, v):
     with PdfPages('Displacement Plots.pdf') as pdf:
         for it1 in range(len(wall_angle)):
             Z_disp = griddata((x/i, y/i), (displacement_results[:,it1]*1e3), (X, Y), method='cubic')
-            plt.figure()
+            plt.figure(figsize = (10, 10))
             contour = plt.contour(Y, X, Z_disp, levels=10, cmap='viridis')
             plt.colorbar(contour, label="Displacement (mm)", ax=plt.gca())
             plt.xlabel("Y Coordinate (y/i)")
