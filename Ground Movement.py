@@ -6,6 +6,7 @@ import sympy as sp
 from sympy.stats import Normal, cdf
 from sympy import Symbol, diff, lambdify
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
 ### IMPORTANT: x-direction is along the tunnel axis, runs up-down page. y-direction is perpendicular
 # Mesh is defined in the typical x-y coordinates, but the contour plots show the flipped axes
@@ -233,11 +234,23 @@ def StrainAlongTheta(x, y):
     ax[0].set_title("Angles Producing Maximum Strain vs. Tunnel Offset")
     ax[0].set_xlabel("Offset from Tunnel Axis (m)")
     ax[0].set_ylabel("Angle for Max Strain (degree)")
+    ax[0].xaxis.set_major_locator(MultipleLocator(5))
+    ax[0].yaxis.set_major_locator(MultipleLocator(20))
+    ax[0].xaxis.set_minor_locator(AutoMinorLocator(5))
+    ax[0].yaxis.set_minor_locator(AutoMinorLocator(2))
+    ax[0].grid(which='major', color='#CCCCCC', linestyle='--')
+    ax[0].grid(which='minor', color='#CCCCCC', linestyle=':')
 
     ax[1].scatter(offsets, max_strain_for_offset)
     ax[1].set_title("Maximum Strain at Each Tunnel Offset")
     ax[1].set_xlabel("Offset from Tunnel Axis (m)")
     ax[1].set_ylabel("Maximum Horizontal Strain at Offset (με)")
+    ax[1].xaxis.set_major_locator(MultipleLocator(5))
+    ax[1].yaxis.set_major_locator(MultipleLocator(0.0002))
+    ax[1].xaxis.set_minor_locator(AutoMinorLocator(5))
+    ax[1].yaxis.set_minor_locator(AutoMinorLocator(2))
+    ax[1].grid(which='major', color='#CCCCCC', linestyle='--')
+    ax[1].grid(which='minor', color='#CCCCCC', linestyle=':')
 
     plt.tight_layout(pad=2.0)
             
