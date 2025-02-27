@@ -204,9 +204,9 @@ def StrainAlongTheta(x, y):
     
     # Find the angle producing maximum strain at each offset (y-distance) from tunnel
     offsets = np.unique(y)
-    indices = np.empty(len(offsets), dtype=object)
+    offset_indices = np.empty(len(offsets), dtype=object)
     for it1 in range(len(offsets)):
-        indices[it1] = np.where(abs(y - offsets[it1]) <= TOL)[0]
+        offset_indices[it1] = np.where(abs(y - offsets[it1]) <= TOL)[0]
 
     # Array to store the angles producing highest strain at each cross-section
     max_angles = np.zeros(len(offsets))
@@ -215,6 +215,11 @@ def StrainAlongTheta(x, y):
     # Corresponding x-coordinate
     max_corresponding_x = np.zeros(len(offsets))
 
+    # For plotting the max strain at each offset for each angle increment
+    # IDEK what to call these anymore man
+    max_strain_at_angle = np.zeros((len(offsets), len(wall_angle)))
+    max_corresponding_x_at_angle = np.zeros((len(offsets), len(wall_angle)))
+
     for it1 in range(len(offsets)):
         
         temp_max_strain = np.zeros(len(wall_angle))
@@ -222,25 +227,27 @@ def StrainAlongTheta(x, y):
 
         for it2 in range(len(wall_angle)):
             temp_strains = strain_results[:,it2]
-            temp_indices = indices[it1]
+            temp_indices = offset_indices[it1]
             # strain at every point at tunnel offset cross-section for the specified angle
             strains_at_angle = temp_strains[temp_indices]
-            temp_x1 = x[temp_indices]
+            x_at_angle = x[temp_indices]
             # considering only positive strain because we only interested in tension
             temp_max_strain[it2] = np.max((strains_at_angle))
-            temp_x[it2] = temp_x1[np.argmax(strains_at_angle)]
-
+            temp_x[it2] = x_at_angle[np.argmax(strains_at_angle)]
         
         # Get the angle which causes the highest strain at the specified cross-section
         max_angles[it1] = wall_angle[temp_max_strain.argmax()]
         max_strain_for_offset[it1] = temp_max_strain[temp_max_strain.argmax()]
         max_corresponding_x[it1] = temp_x[temp_max_strain.argmax()]
 
+        max_strain_at_angle[it1] = temp_max_strain
+        max_corresponding_x_at_angle[it1] = temp_x
+
     fig, ax = plt.subplots(3, 1, figsize = (14, 12))
     ax[0].scatter(offsets, max_angles)
-    ax[0].set_title("Angles Producing Maximum Strain vs. Tunnel Offset")
+    ax[0].set_title("Angles Producing Maximum Tensile Strain vs. Tunnel Offset")
     ax[0].set_xlabel("Offset from Tunnel Axis (m)")
-    ax[0].set_ylabel("Angle for Max Strain (degree)")
+    ax[0].set_ylabel("Angle for Max Tensile Strain (degree)")
     ax[0].xaxis.set_major_locator(MultipleLocator(5))
     ax[0].yaxis.set_major_locator(MultipleLocator(20))
     ax[0].xaxis.set_minor_locator(AutoMinorLocator(5))
@@ -248,9 +255,9 @@ def StrainAlongTheta(x, y):
     ax[0].grid(which='minor', color='#CCCCCC', linestyle=':')
 
     ax[1].scatter(offsets, max_strain_for_offset*1e6)
-    ax[1].set_title("Maximum Strain at Each Tunnel Offset")
+    ax[1].set_title("Maximum Tensile Strain at Each Tunnel Offset")
     ax[1].set_xlabel("Offset from Tunnel Axis (m)")
-    ax[1].set_ylabel("Maximum Horizontal Strain at Offset (με)")
+    ax[1].set_ylabel("Maximum Horizontal Tensile Strain (με)")
     ax[1].xaxis.set_major_locator(MultipleLocator(5))
     ax[1].yaxis.set_major_locator(MultipleLocator(200))
     ax[1].xaxis.set_minor_locator(AutoMinorLocator(5))
@@ -270,6 +277,34 @@ def StrainAlongTheta(x, y):
     ax[2].grid(which='minor', color='#CCCCCC', linestyle=':')
 
     plt.tight_layout(pad=2.0)
+
+    with PdfPages('Max Strain per Angle.pdf') as pdf:
+        for it1 in range(len(wall_angle)):
+            fig, ax = plt.subplots(2, 1, figsize = (10, 10))
+            ax[0].scatter(offsets, max_strain_at_angle[:,it1]*1e6)
+            ax[0].set_title("Maximum Tensile Strain: " + str(wall_angle[it1]) + " Degrees from Tunnel Axis")
+            ax[0].set_xlabel("Offset from Tunnel Axis (m)")
+            ax[0].set_ylabel("Max Horizontal Tensile Strain (με)")
+            ax[0].xaxis.set_major_locator(MultipleLocator(5))
+            ax[0].yaxis.set_major_locator(MultipleLocator(200))
+            ax[0].xaxis.set_minor_locator(AutoMinorLocator(5))
+            ax[0].yaxis.set_minor_locator(AutoMinorLocator(4))
+            ax[0].grid(which='major', color='#CCCCCC', linestyle='--')
+            ax[0].grid(which='minor', color='#CCCCCC', linestyle=':')
+
+            ax[1].scatter(offsets, max_corresponding_x_at_angle[:,it1])
+            ax[1].set_title("Corresponding X-Coordinate: " + str(wall_angle[it1]) + " Degrees from Tunnel Axis")
+            ax[1].set_xlabel("Offset from Tunnel Axis (m)")
+            ax[1].set_ylabel("X-Coordinate (m)")
+            ax[1].xaxis.set_major_locator(MultipleLocator(5))
+            ax[1].yaxis.set_major_locator(MultipleLocator(4))
+            ax[1].xaxis.set_minor_locator(AutoMinorLocator(5))
+            ax[1].yaxis.set_minor_locator(AutoMinorLocator(4))
+            ax[1].grid(which='major', color='#CCCCCC', linestyle='--')
+            ax[1].grid(which='minor', color='#CCCCCC', linestyle=':')
+
+            pdf.savefig()
+            plt.close()
             
 def DisplacementAlongTheta(x, y, u, v):
     #wall_angle = np.array([0, 90])
