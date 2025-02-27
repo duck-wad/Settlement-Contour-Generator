@@ -212,24 +212,31 @@ def StrainAlongTheta(x, y):
     max_angles = np.zeros(len(offsets))
     # Corresponding max strain for each cross-section
     max_strain_for_offset = np.zeros(len(offsets))
+    # Corresponding x-coordinate
+    max_corresponding_x = np.zeros(len(offsets))
 
     for it1 in range(len(offsets)):
         
         temp_max_strain = np.zeros(len(wall_angle))
+        temp_x = np.zeros(len(wall_angle))
 
         for it2 in range(len(wall_angle)):
             temp_strains = strain_results[:,it2]
             temp_indices = indices[it1]
             # strain at every point at tunnel offset cross-section for the specified angle
             strains_at_angle = temp_strains[temp_indices]
-            # are we considering absolute or just positive strain?
-            temp_max_strain[it2] = np.max(np.absolute(strains_at_angle))
+            temp_x1 = x[temp_indices]
+            # considering only positive strain because we only interested in tension
+            temp_max_strain[it2] = np.max((strains_at_angle))
+            temp_x[it2] = temp_x1[np.argmax(strains_at_angle)]
+
         
         # Get the angle which causes the highest strain at the specified cross-section
         max_angles[it1] = wall_angle[temp_max_strain.argmax()]
         max_strain_for_offset[it1] = temp_max_strain[temp_max_strain.argmax()]
+        max_corresponding_x[it1] = temp_x[temp_max_strain.argmax()]
 
-    fig, ax = plt.subplots(2, 1, figsize = (14, 9))
+    fig, ax = plt.subplots(3, 1, figsize = (14, 12))
     ax[0].scatter(offsets, max_angles)
     ax[0].set_title("Angles Producing Maximum Strain vs. Tunnel Offset")
     ax[0].set_xlabel("Offset from Tunnel Axis (m)")
@@ -237,20 +244,30 @@ def StrainAlongTheta(x, y):
     ax[0].xaxis.set_major_locator(MultipleLocator(5))
     ax[0].yaxis.set_major_locator(MultipleLocator(20))
     ax[0].xaxis.set_minor_locator(AutoMinorLocator(5))
-    ax[0].yaxis.set_minor_locator(AutoMinorLocator(2))
     ax[0].grid(which='major', color='#CCCCCC', linestyle='--')
     ax[0].grid(which='minor', color='#CCCCCC', linestyle=':')
 
-    ax[1].scatter(offsets, max_strain_for_offset)
+    ax[1].scatter(offsets, max_strain_for_offset*1e6)
     ax[1].set_title("Maximum Strain at Each Tunnel Offset")
     ax[1].set_xlabel("Offset from Tunnel Axis (m)")
     ax[1].set_ylabel("Maximum Horizontal Strain at Offset (με)")
     ax[1].xaxis.set_major_locator(MultipleLocator(5))
-    ax[1].yaxis.set_major_locator(MultipleLocator(0.0002))
+    ax[1].yaxis.set_major_locator(MultipleLocator(200))
     ax[1].xaxis.set_minor_locator(AutoMinorLocator(5))
     ax[1].yaxis.set_minor_locator(AutoMinorLocator(2))
     ax[1].grid(which='major', color='#CCCCCC', linestyle='--')
     ax[1].grid(which='minor', color='#CCCCCC', linestyle=':')
+
+    ax[2].scatter(offsets, max_corresponding_x)
+    ax[2].set_title("Corresponding X-Coordinate for Each Tunnel Offset")
+    ax[2].set_xlabel("Offset from Tunnel Axis (m)")
+    ax[2].set_ylabel("X-Coordinate (m)")
+    ax[2].xaxis.set_major_locator(MultipleLocator(5))
+    ax[2].yaxis.set_major_locator(MultipleLocator(4))
+    ax[2].xaxis.set_minor_locator(AutoMinorLocator(5))
+    ax[2].grid(which='major', color='#CCCCCC', linestyle='--')
+    ax[2].grid(which='minor', color='#CCCCCC', linestyle=':')
+    ax[2].grid(which='minor', color='#CCCCCC', linestyle=':')
 
     plt.tight_layout(pad=2.0)
             
